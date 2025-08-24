@@ -1,0 +1,81 @@
+services:
+
+  db:
+    image: postgres:16-bookworm
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mydatabase
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  cache:
+    image: redis:7-bookworm
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+  
+  full-text-search:
+    image: opensearchproject/opensearch:2.10.0
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+  full-text-search-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.10.0
+    environment:
+      - OPENSEARCH_HOSTS=http://full-text-search:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - full-text-search
+  
+  message-broker:
+    image: redpanda/redpanda:v23.4.10
+    command: ["redpanda", "start", "--overprovisioned"]
+    ports:
+      - "9092:9092"
+  message-broker-console:
+    image: redpanda/console:v23.4.10
+    environment:
+      - REDPANDA_BROKERS=message-broker:9092
+    ports:
+      - "8081:8081"
+    depends_on:
+      - message-broker
+  
+  observability-tracer:
+    image: otel/opentelemetry-collector-contrib:0.87.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "55681:55681" # OTLP HTTP receiver
+      - "8888:8888"   # Prometheus metrics endpoint
+  observability-tracer-ui:
+    image: jaegertracing/all-in-one:1.49
+    ports:
+      - "16686:16686" # Jaeger UI
+    depends_on:
+      - observability-tracer
+  observability-metrics:
+    images: prom/prometheus:v2.53.1
+    ports:
+      - "9090:9090"
+  observability-grafana:
+    image: grafana/grafana:10.0.3
+    ports:
+      - "3000:3000"
+    depends_on:
+      - observability-metrics
+  api:
+    build: .
+    command: uvicorn main:app --host
+    ports:
+      - "8000:8000"
+  
