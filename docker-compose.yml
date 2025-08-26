@@ -50,7 +50,7 @@ services:
   message-broker-console:
     image: redpandadata/console:v2.8.6
     environment:
-      - REDPANDA_BROKERS=message-broker:9092
+      - KAFKA_BROKERS=message-broker:9092
     ports:
       - "8081:8081"
     depends_on:
