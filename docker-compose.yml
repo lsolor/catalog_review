@@ -80,7 +80,6 @@ services:
       - observability-metrics
   api:
     build: .
-    command: uvicorn main:app --host
     ports:
       - "8000:8000"
     depends_on:
