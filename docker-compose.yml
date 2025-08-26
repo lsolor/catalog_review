@@ -44,7 +44,10 @@ services:
   
   message-broker:
     image: redpandadata/redpanda:v25.2.1
-    command: ["redpanda", "start", "--overprovisioned"]
+    command: > # TODO: make sure message-broker is advertised correctly
+      redpanda start --overprovisioned
+      --kafka-addr PLAINTEXT://0.0.0.0:9092
+      --advertise-kafka-addr PLAINTEXT://message-broker:9092
     ports:
       - "9092:9092"
   message-broker-console:
