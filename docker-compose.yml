@@ -17,7 +17,7 @@ services:
     ports:
       - "6379:6379"
   
-  full-text-search:
+  opensearch:
     image: opensearchproject/opensearch:2.10.0
     environment:
       - discovery.type=single-node
@@ -33,61 +33,65 @@ services:
     #   - opensearch-data:/usr/share/opensearch/data
     ports:
       - "9200:9200"
-  full-text-search-dashboards:
+  opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:2.10.0
     environment:
-      - OPENSEARCH_HOSTS=http://full-text-search:9200
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
     ports:
-      - "5601:5601"
+      - "${DASHBOARD_PORT}:5601"
     depends_on:
-      - full-text-search
+      - opensearch
   
-  message-broker:
+  kafka:
     image: redpandadata/redpanda:v25.2.1
-    command: > # TODO: make sure message-broker is advertised correctly
+    command: >
       redpanda start --overprovisioned
       --kafka-addr PLAINTEXT://0.0.0.0:9092
-      --advertise-kafka-addr PLAINTEXT://message-broker:9092
+      --advertise-kafka-addr PLAINTEXT://kafka:9092
     ports:
       - "9092:9092"
-  message-broker-console:
+  kafka-console:
     image: redpandadata/console:v2.8.6
     environment:
-      - KAFKA_BROKERS=message-broker:9092
+      - KAFKA_BROKERS=kafka:9092
     ports:
-      - "8081:8081"
+      - "${CONSOLE_PORT}:8080"
     depends_on:
-      - message-broker
-  
-  observability-tracer:
+      - kafka
+
+  otel-collector:
     image: otel/opentelemetry-collector-contrib:0.87.0
     ports:
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP HTTP receiver
       - "8888:8888"   # Prometheus metrics endpoint
-  observability-tracer-ui:
+  otel-collector-ui:
     image: jaegertracing/all-in-one:1.49
     ports:
       - "16686:16686" # Jaeger UI
     depends_on:
-      - observability-tracer
-  observability-metrics:
+      - otel-collector
+  prometheus:
     image: prom/prometheus:v2.53.1
     ports:
       - "9090:9090"
-  observability-grafana:
+  grafana:
     image: grafana/grafana:10.0.3
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT}:3000"
     depends_on:
-      - observability-metrics
+      - prometheus
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "${API_PORT}:8000"
     depends_on:
       - db
       - cache
-      - full-text-search
-      - message-broker
+      - opensearch
+      - kafka
   
