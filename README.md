@@ -37,6 +37,23 @@
    - Jaeger: `http://localhost:16686`
    - Grafana: `http://localhost:3000` (import dashboards from `docs/grafana/`)
 
+## Development
+
+1. **UV Local**
+   - uv run fastapi dev main.py --host 0.0.0.0 --port 8000
+2. **Start infra**
+   - `docker compose up -d` (brings up Postgres, Redis, Redpanda, OpenSearch, Jaeger, Prometheus, Grafana).
+3. **Run API & workers**
+   - Start the API container (FastAPI) and two worker containers (Indexer, Trending).
+4. **Seed data (optional)**
+   - Run the seed script to create users/products/reviews.
+5. **Open UIs**
+   - API docs: `http://localhost:8000/docs`
+   - Redpanda Console: `http://localhost:8081`
+   - OpenSearch Dashboards: `http://localhost:5601`
+   - Jaeger: `http://localhost:16686`
+   - Grafana: `http://localhost:3000` (import dashboards from `docs/grafana/`)
+
 ---
 
 ## Domain & API (v1)
